@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Create a new WebSocket connection
+            const socket = new WebSocket('http://localhost:8081');
+
+
+            window.addEventListener('beforeunload', function (e) {
+                socket.close();
+            });
+
+            // Event listener when the connection is established
+            socket.addEventListener('open', function (event) {
+                console.log('WebSocket connection established');
+                // You can send messages to the server after the connection is open
+                socket.send('Hello, server!');
+            });
+
+            // Event listener to receive messages from the WebSocket server
+            socket.addEventListener('message', function (event) {
+                console.log('Message from server:', event.data);
+            });
+
+            // Event listener when the WebSocket connection is closed
+            socket.addEventListener('close', function (event) {
+                console.log('WebSocket connection closed');
+            });
+
+            setTimeout(() => {
+                socket.send('Hello, server!');
+            }, 5000);
+        });
+
+    </script>
+</body>
+
+</html>

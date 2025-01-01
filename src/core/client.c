@@ -2,6 +2,7 @@
 #include "websocket.h"
 #include "base64.h"
 #include "frame.h"
+#include "event.h"
 
 client_t **clients = NULL;
 int client_count = 0;
@@ -82,7 +83,14 @@ void *client_handler(void *arg)
             {
                 decoded[decoded_length] = '\0';
                 printf("Decoded data: %s\n", decoded);
-                echo(client, decoded);
+                char event_name[50];
+                char data[BUFFER_SIZE];
+
+                if (sscanf(decoded, "42[\"%49[^\"]\",\"%[^\"]\"]", event_name, data) == 2)
+                {
+                    printf("Event: %s, Data: %s\n", event_name, data); // Debugging output
+                    emit_event(event_name, client, data);
+                }
             }
             else
             {
@@ -99,7 +107,13 @@ void *client_handler(void *arg)
 
 void echo(client_t *client, char *data)
 {
+    if (data == NULL)
+    {
+        printf("Error: Data is NULL.\n");
+        return;
+    }
     char message[BUFFER_SIZE];
-    snprintf(message, sizeof(message), data);
+    strncpy(message, data, sizeof(message) - 1);
+    message[sizeof(message) - 1] = '\0';
     send_frame(client->client_fd, message);
 }

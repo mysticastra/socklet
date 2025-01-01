@@ -16,6 +16,7 @@
             const socket = new WebSocket('http://localhost:8081');
 
 
+
             window.addEventListener('beforeunload', function (e) {
                 socket.close();
             });
@@ -24,12 +25,12 @@
             socket.addEventListener('open', function (event) {
                 console.log('WebSocket connection established');
                 // You can send messages to the server after the connection is open
-                socket.send('Hello, server!');
+                socket.send('42["message","[1,2]"]');
             });
 
             // Event listener to receive messages from the WebSocket server
             socket.addEventListener('message', function (event) {
-                console.log('Message from server:', event.data);
+                console.log(JSON.parse(event.data));
             });
 
             // Event listener when the WebSocket connection is closed

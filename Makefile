@@ -11,7 +11,7 @@ BUILDDIR = build
 BINDIR = bin
 
 # Source Files
-SOURCES = $(SRCDIR)/base64.c $(SRCDIR)/frame.c $(SRCDIR)/websocket.c $(SRCDIR)/client.c $(SRCDIR)/server.c
+SOURCES = $(SRCDIR)/event.c $(SRCDIR)/base64.c $(SRCDIR)/frame.c $(SRCDIR)/websocket.c $(SRCDIR)/client.c $(SRCDIR)/server.c
 OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 
 # Executable

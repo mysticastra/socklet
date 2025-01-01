@@ -15,7 +15,7 @@
 #define YELLOW_COLOR "\033[33m"
 #define CYAN_COLOR "\033[36m"
 
-typedef struct {
+typedef struct client_t {
     int client_fd;
     struct sockaddr_in client_address;
     char extra_info[BUFFER_SIZE];

@@ -74,6 +74,21 @@ void *client_handler(void *arg)
     {
         memset(buffer, 0, BUFFER_SIZE);
         int bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+
+        if (bytes_received <= 0)
+        {
+            if (bytes_received == 0)
+            {
+                printf("Client disconnected: %s:%d\n",
+                       inet_ntoa(client_address.sin_addr), ntohs(client_address.sin_port));
+            }
+            else
+            {
+                perror("recv failed");
+            }
+            break;
+        }
+
         if (bytes_received > 0)
         {
             char decoded[BUFFER_SIZE];
@@ -88,7 +103,7 @@ void *client_handler(void *arg)
 
                 if (sscanf(decoded, "42[\"%49[^\"]\",\"%[^\"]\"]", event_name, data) == 2)
                 {
-                    printf("Event: %s, Data: %s\n", event_name, data); // Debugging output
+                    printf("Event: %s, Data: %s\n", event_name, data);
                     emit_event(event_name, client, data);
                 }
             }

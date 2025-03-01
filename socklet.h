@@ -17,9 +17,16 @@
 
 typedef struct
 {
+    int client_fd;
+    struct sockaddr_in client_address;
+    char *extra_info;
+} client_t;
+
+typedef struct
+{
     int server_fd;
     struct sockaddr_in address;
-    void (*callback)(int, char *);
+    void (*callback)(int, char *, client_t *);
     bool (*authentication_handler)(int, char *);
 } server_t;
 
@@ -29,14 +36,7 @@ typedef struct client_data
     server_t *server;
 } client_data_t;
 
-typedef struct
-{
-    int client_fd;
-    struct sockaddr_in client_address;
-    char extra_info[BUFFER_SIZE];
-} client_t;
-
-void server_init(server_t *server, void (*callback)(int, char *), bool (*authentication_handler)(int, char *));
+void server_init(server_t *server, void (*callback)(int, char *, client_t*), bool (*authentication_handler)(int, char *));
 void server_listen(server_t *server, int port);
 void server_close(server_t *server);
 void *client_handler(void *arg);
@@ -54,7 +54,7 @@ client_t **clients = NULL;
 int client_count = 0;
 pthread_mutex_t client_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void server_init(server_t *server, void (*callback)(int, char *), bool (*authentication_handler)(int, char *))
+void server_init(server_t *server, void (*callback)(int, char *, client_t *), bool (*authentication_handler)(int, char *))
 {
     server->server_fd = 0;
     server->callback = callback;
@@ -176,9 +176,11 @@ void *client_handler(void *arg)
     client_t *client = malloc(sizeof(client_t));
     client->client_fd = client_fd;
     client->client_address = client_address;
+    client->extra_info = NULL;
+
     add_client(client);
 
-    server->callback(client_fd, headers);
+    server->callback(client_fd, headers, client);
 
     while (1)
     {

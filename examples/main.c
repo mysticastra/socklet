@@ -2,8 +2,9 @@
 
 #include "../socklet.h"
 
-void callback(int client_fd, char *buffer)
+void callback(int client_fd, char *headers, client_t *client)
 {
+    client->extra_info= strdup("1");
     send_frame(client_fd, "Hello from server");
 }
 
@@ -19,7 +20,7 @@ bool authentication_handler(int client_fd, char *headers)
 
     auth_header_start += strlen("Authorization: ");
     char *auth_header_end = strstr(auth_header_start, "\r\n");
-    
+
     if (!auth_header_end)
     {
         send_frame(client_fd, "HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -30,8 +31,8 @@ bool authentication_handler(int client_fd, char *headers)
     char auth_header[256] = {0};
     strncpy(auth_header, auth_header_start, auth_header_end - auth_header_start);
     auth_header[auth_header_end - auth_header_start] = '\0';
-    
-    if(strcmp(auth_header, "Bearer 123456") != 0)
+
+    if (strcmp(auth_header, "Bearer 123456") != 0)
     {
         send_frame(client_fd, "HTTP/1.1 401 Unauthorized\r\n\r\n");
         return false;

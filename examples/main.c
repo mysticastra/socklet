@@ -4,7 +4,7 @@
 
 void callback(int client_fd, char *headers, client_t *client)
 {
-    client->extra_info= strdup("1");
+    client->extra_info = strdup("1");
     send_frame(client_fd, "Hello from server");
 }
 
@@ -41,10 +41,16 @@ bool authentication_handler(int client_fd, char *headers)
     return true;
 }
 
+void sendMessage(client_t *client, void *data)
+{
+    send_frame(client->client_fd, data);
+}
+
 int main()
 {
     server_t server;
     server_init(&server, callback, authentication_handler);
+    register_event("sendMessage", sendMessage);
     server_listen(&server, 8081);
     server_close(&server);
     return 0;

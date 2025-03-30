@@ -12,6 +12,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
+#include "jsoncraftor.h"
 
 #define BUFFER_SIZE 1024
 
@@ -36,7 +37,13 @@ typedef struct client_data
     server_t *server;
 } client_data_t;
 
-void server_init(server_t *server, void (*callback)(int, char *, client_t*), bool (*authentication_handler)(int, char *));
+typedef struct
+{
+    const char *event_name;
+    void (*callback)(client_t *client, void *data);
+} event_t;
+
+void server_init(server_t *server, void (*callback)(int, char *, client_t *), bool (*authentication_handler)(int, char *));
 void server_listen(server_t *server, int port);
 void server_close(server_t *server);
 void *client_handler(void *arg);
@@ -47,11 +54,16 @@ void add_client(client_t *client);
 void remove_client(int client_fd);
 void send_frame(int client_fd, const char *message);
 int decode_frame(const unsigned char *input, size_t input_length, char *output, size_t *output_length);
+void register_event(const char *event_name, void (*callback)(client_t *client, void *data));
+void handle_event(client_t *client, void *data);
+void emit_event(const char *event_name, client_t *client, void *data);
 
 #ifdef SOCKLET_IMPLEMENTATION
 
 client_t **clients = NULL;
+event_t **events = NULL;
 int client_count = 0;
+int events_count = 0;
 pthread_mutex_t client_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void server_init(server_t *server, void (*callback)(int, char *, client_t *), bool (*authentication_handler)(int, char *))
@@ -209,7 +221,7 @@ void *client_handler(void *arg)
             if (decode_frame((unsigned char *)buffer, bytes_received, decoded, &decoded_length) == 0)
             {
                 decoded[decoded_length] = '\0';
-                printf("Decoded data: %s\n", decoded);
+                handle_event(client, decoded);
             }
             else
             {
@@ -259,6 +271,65 @@ void remove_client(int client_fd)
     }
     printf("Total clients after removal: %d\n", client_count);
     pthread_mutex_unlock(&client_lock);
+}
+
+void register_event(const char *event_name, void (*callback)(client_t *client, void *data))
+{
+    event_t **temp = realloc(events, sizeof(event_t *) * (events_count + 1));
+    if (!temp)
+    {
+        perror("Failed to allocate memory for events");
+        return;
+    }
+    events = temp;
+
+    event_t *event = malloc(sizeof(event_t));
+    event->event_name = event_name;
+    event->callback = callback;
+
+    events[events_count++] = event;
+}
+
+void handle_event(client_t *client, void *data)
+{
+    char type[BUFFER_SIZE];
+    char event[BUFFER_SIZE];
+    char client_data[BUFFER_SIZE] = {0};
+    char *error = NULL;
+
+    JsonMap mappings[] = {
+        {"type", &type, 's', 20, true, NULL},
+        {"event", &event, 's', 20, true, NULL},
+        {"data", &client_data, 's', 500, false, NULL}
+    };
+
+    if(parse_json(data, mappings, 3, &error))
+    {
+        if(strcmp(type, "socklet:dispatch") == 0)
+        {
+            emit_event(event, client, client_data);
+        }
+        else
+        {
+            printf("Invalid message type: %s\n", type);
+        }
+    }
+    else
+    {
+        printf("Failed to parse JSON: %s\n", error);
+    }
+}
+
+void emit_event(const char *event_name, client_t *client, void *data)
+{
+    for (int i = 0; i < events_count; i++)
+    {
+        if (strcmp(events[i]->event_name, event_name) == 0)
+        {
+            events[i]->callback(client, data);
+            break;
+        }
+    }
 }
 
 int websocket_handshake(int client_fd, char *headers_string)
